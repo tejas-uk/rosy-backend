@@ -1,0 +1,10 @@
+python-dotenv
+langchain-core
+langgraph
+langchain-openai
+langchain-anthropic
+langchain-chroma
+chromadb
+langchain-tavily
+pydantic
+ipython
