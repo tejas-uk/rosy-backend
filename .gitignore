@@ -1,0 +1,6 @@
+pregnancy_and_parenting_chroma_db/
+__pycache__/
+**/__pycache__/
+.env
+.DS_Store
+*.pyc 
