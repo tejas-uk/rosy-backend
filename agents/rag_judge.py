@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from states import AgentState
 from langchain_core.messages import HumanMessage
-from tools import BookRetrieverTool
+from tools import PineconeBookRetrieverTool
 from typing import Literal
 
 class RagJudge(BaseModel):
@@ -16,7 +16,7 @@ class RagJudgeNode:
         ):
         self.judge_llm = ChatOpenAI(model=model_name, temperature=temperature)\
             .with_structured_output(RagJudge)
-        self.rag_search = BookRetrieverTool()
+        self.rag_search = PineconeBookRetrieverTool()
     
     def __call__(self, state: AgentState) -> AgentState:
         query = next((m.content for m in reversed(state["messages"])

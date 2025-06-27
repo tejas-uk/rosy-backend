@@ -1,2 +1,3 @@
 from .book_retriever import BookRetrieverTool
+from .pinecone_book_retriever import PineconeBookRetrieverTool
 from .web_search import WebSearchTool
