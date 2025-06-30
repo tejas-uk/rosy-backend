@@ -50,10 +50,10 @@ class AnswerNode:
                     """
 
         ROOT = pathlib.Path(__file__).parents[1]
-        LILY_PROMPT = (ROOT / "prompts" / "lily.md").read_text(encoding="utf-8")
+        ROSI_PROMPT = (ROOT / "prompts" / "rosi.md").read_text(encoding="utf-8")
         
         response = self.answer_llm.invoke([
-            SystemMessage(content=LILY_PROMPT),
+            SystemMessage(content=ROSI_PROMPT),
             HumanMessage(content=prompt)
         ]).content
 
