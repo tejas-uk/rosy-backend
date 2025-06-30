@@ -8,3 +8,6 @@ chromadb
 langchain-tavily
 pydantic
 ipython
+fastapi
+uvicorn[standard]
+psycopg[binary]

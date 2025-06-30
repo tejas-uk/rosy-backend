@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from states import AgentState
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from messages import LilyMessage
+# from messages import LilyMessage  # Using AIMessage instead for PostgreSQL compatibility
 from typing import Literal
 import pathlib
 
@@ -59,7 +59,7 @@ class AnswerNode:
 
         return {
             **state,
-            "messages": state["messages"] + [LilyMessage(content=response)]
+            "messages": state["messages"] + [AIMessage(content=response)]
         }
     
     def after_web(self, state: AgentState) -> Literal["answer"]:

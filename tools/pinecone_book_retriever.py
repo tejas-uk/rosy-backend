@@ -35,12 +35,12 @@ class PineconeBookRetrieverTool(BaseTool):
         self._retriever = self._init_retriever()
 
     def _init_retriever(self):
-        print("-"*50)
-        print("Initializing retriever with the following parameters:")
-        print(f"Index name: {self._index_name}")
-        print(f"Embedding model: {self._embedding_model}")
-        print(f"K: {self._k}")
-        print("-"*50)
+        # print("-"*50)
+        # print("Initializing retriever with the following parameters:")
+        # print(f"Index name: {self._index_name}")
+        # print(f"Embedding model: {self._embedding_model}")
+        # print(f"K: {self._k}")
+        # print("-"*50)
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
         vectorstore = PineconeVectorStore(
