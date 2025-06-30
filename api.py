@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uuid
 import hashlib
@@ -100,10 +101,19 @@ async def lifespan(app: FastAPI):
     # Shutdown (if needed)
 
 app = FastAPI(
-    title="Lily Chat API", 
+    title="Rosi Chat API", 
     description="Pediatric nurse AI chat API", 
     version="1.0.0",
     lifespan=lifespan
+)
+
+# Add CORS middleware for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure this for your frontend domain in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # User Management Endpoints
@@ -262,7 +272,7 @@ def send_message(user_id: str, thread_id: str, message: MessageSend):
 @app.get("/health")
 def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "Lily Chat API"}
+    return {"status": "healthy", "service": "Rosi Chat API"}
 
 # Get user's chat threads
 @app.get("/users/{user_id}/chats")
@@ -290,4 +300,6 @@ def get_user_chats(user_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
