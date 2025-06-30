@@ -31,7 +31,6 @@ class Agent:
                 "rag": "rag_lookup",
                 "web": "web_search",
                 "answer": "answer",
-                "end": END
             }
         )
 
@@ -60,9 +59,9 @@ class Agent:
     def save_agent_graph(self, path: str):
         save_graph(self.agent, path)
 
-    def __call__(self, query: str):
+    def __call__(self, state: AgentState):
         response = self.agent.invoke(
-            {"messages": [HumanMessage(content=query)]},
+            state,
             config = self.config
         )
         return response

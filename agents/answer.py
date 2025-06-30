@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from states import AgentState
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from messages import LilyMessage
 from typing import Literal
 import pathlib
 
@@ -13,7 +14,7 @@ class AnswerNode:
         ):
         self.answer_llm = ChatOpenAI(model=model_name, temperature=temperature)
 
-    def _get_context(self, state: AgentState) -> str:
+    def _get_context(self, state: AgentState) -> str|None:
         ctx_parts = []
         
         if state.get("rag"):
@@ -22,25 +23,34 @@ class AnswerNode:
         if state.get("web"):
             ctx_parts.append(f"Retrieved info from web:\n{state['web']}")
         
-        return "\n\n".join(ctx_parts) if ctx_parts else "No external info available"
+        return "\n\n".join(ctx_parts) if ctx_parts else None
 
     def __call__(self, state: AgentState) -> AgentState:
-        query = next((m.content for m in reversed(state["messages"])
-                      if isinstance(m, HumanMessage)), "")
+        # query = next((m.content for m in reversed(state["messages"])
+        #               if isinstance(m, HumanMessage)), "")
         
+        conversation = "\n".join([f"{m.type}: {m.content}" for m in state["messages"]])
+        # print(f"Conversation:\n{conversation}")
         context = self._get_context(state)
+        prompt = ""
+        if context:
+            prompt = f"""Please answer the user's latest query in the conversation based on the provided context:
+                    Conversation:
+                    {conversation}
+                    
+                    Context:
+                    {context}
+
+                    Provide a helpful, accurate, and concise response based on the available information.
+                    """
+        else:
+            prompt = f"""Please answer the user's latest query/message in the conversation:
+                    Conversation:
+                    {conversation}
+                    """
 
         ROOT = pathlib.Path(__file__).parents[1]
         LILY_PROMPT = (ROOT / "prompts" / "lily.md").read_text(encoding="utf-8")
-        prompt = f"""Please answer the user's query based on the provided context:
-                Query:
-                {query}
-                
-                Context:
-                {context}
-
-                Provide a helpful, accurate, and concise response based on the available information.
-                """
         
         response = self.answer_llm.invoke([
             SystemMessage(content=LILY_PROMPT),
@@ -49,7 +59,7 @@ class AnswerNode:
 
         return {
             **state,
-            "messages": state["messages"] + [AIMessage(content=response)]
+            "messages": state["messages"] + [LilyMessage(content=response)]
         }
     
     def after_web(self, state: AgentState) -> Literal["answer"]:

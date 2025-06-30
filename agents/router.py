@@ -38,12 +38,12 @@ class RouterNode:
         result: RouteDecision = self.router_llm.invoke(messages)
 
         out = {"messages": state["messages"], "route": result.route}
-        if result.route == "end":
-            out["messages"] = state["messages"] + [ AIMessage(content=result.reply or "Hello!") ]
+        # if result.route == "end":
+        #     out["messages"] = state["messages"] + [ AIMessage(content=result.reply or "Hello!") ]
 
         return out
     
-    def from_router(self, state: AgentState) -> Literal["rag", "answer", "end", "web"]:
+    def from_router(self, state: AgentState) -> Literal["rag", "answer", "web"]:
         return state["route"]
 
 # Usage in LangGraph:

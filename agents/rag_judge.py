@@ -1,9 +1,10 @@
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from states import AgentState
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from tools import PineconeBookRetrieverTool
 from typing import Literal
+import pathlib
 
 class RagJudge(BaseModel):
     sufficient: bool
@@ -23,14 +24,11 @@ class RagJudgeNode:
                       if isinstance(m, HumanMessage)), "")
         
         chunks = self.rag_search.invoke({"query": query})
-        
+        _ROOT = pathlib.Path(__file__).parents[1]
+        _JUDGE_PROMPT = (_ROOT / "prompts" / "judge.md").read_text(encoding="utf-8")
         judge_messages = [
-            ("system",
-            ("You are a RAG agent that can answer questions based on the provided documents. \n"
-            "You will be given a query and a list of documents. \n"
-            "You need to answer the query based on the documents. \n"
-            )),
-            ("user", f"Query: {query}\nRetrienved info: {chunks}\n\nIs this enough to answer the query?")
+            SystemMessage(content=_JUDGE_PROMPT),
+            HumanMessage(content=f"Query: {query}\nRetrienved info: {chunks}\n\nIs this enough to answer the query?")
         ]
 
         verdict = self.judge_llm.invoke(judge_messages)
