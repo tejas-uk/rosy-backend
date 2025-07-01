@@ -8,7 +8,8 @@ from langchain_pinecone import PineconeVectorStore
 
 class PineconeBookRetrieverTool(BaseTool):
     name: str = "book_retriever_tool"
-    description: str = "Search the book database for the most relevant books"
+    description: str = """This tool is used to search the book database for the most relevant information about\
+          pregnancy, early motherhood, and child care."""
 
     # Define all configurable fields with type annotations
 

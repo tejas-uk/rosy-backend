@@ -10,9 +10,10 @@ class AnswerNode:
     def __init__(
             self, 
             model_name: str = "gpt-4.1-mini", 
-            temperature: float = 0.7
+            temperature: float = 0.7,
+            max_tokens: int = 16000
         ):
-        self.answer_llm = ChatOpenAI(model=model_name, temperature=temperature)
+        self.answer_llm = ChatOpenAI(model=model_name, temperature=temperature, max_tokens=max_tokens)
 
     def _get_context(self, state: AgentState) -> str|None:
         ctx_parts = []

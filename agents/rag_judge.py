@@ -8,6 +8,7 @@ import pathlib
 
 class RagJudge(BaseModel):
     sufficient: bool
+    use_web: bool
 
 class RagJudgeNode:
     def __init__(
@@ -28,15 +29,28 @@ class RagJudgeNode:
         _JUDGE_PROMPT = (_ROOT / "prompts" / "judge.md").read_text(encoding="utf-8")
         judge_messages = [
             SystemMessage(content=_JUDGE_PROMPT),
-            HumanMessage(content=f"Query: {query}\nRetrienved info: {chunks}\n\nIs this enough to answer the query?")
+            HumanMessage(content=f"""Query: {query}\nRetrienved info: {chunks}\n\nIs this enough to answer the query?
+            If not, mark **use_web** as True.
+            If yes, and the retrieved info is not enough, mark **use_web** as True.
+            If yes, and the retrieved info is enough, mark **use_web** as False.
+            """)
         ]
 
         verdict = self.judge_llm.invoke(judge_messages)
 
+        route = ""
+        if verdict.sufficient:
+            if verdict.use_web:
+                route = "web"
+            else:
+                route = "answer"
+        else:
+            route = "web"
+
         return {
             **state,
             "rag_docs": chunks,
-            "route": "answer" if verdict.sufficient else "web"
+            "route": route
         }
     
     def after_rag(self, state: AgentState) -> Literal["answer", "web"]:
