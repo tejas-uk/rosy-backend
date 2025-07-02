@@ -6,5 +6,11 @@ langchain-anthropic
 langchain-chroma
 chromadb
 langchain-tavily
+pinecone
+langchain-pinecone
+langgraph-checkpoint-postgres
 pydantic
 ipython
+fastapi
+uvicorn[standard]
+psycopg[binary]

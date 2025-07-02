@@ -3,10 +3,11 @@ from langgraph.graph import StateGraph, START, END
 from agents import RouterNode, RagJudgeNode, AnswerNode, WebSearchNode
 from states import AgentState
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.postgres import PostgresSaver
 from utils.graph_visualizaer import save_graph, visualize_graph
 from langchain_core.messages import HumanMessage
 from typing import Optional
-
+import os
 
 class Agent:
     def __init__(self, config: Optional[dict] = None):
@@ -48,11 +49,32 @@ class Agent:
         self.graph.add_edge("answer", END)
         
         self.agent = self.graph.compile(
-            checkpointer = MemorySaver(),
+            checkpointer = self._init_checkpointer(),
         )
 
         self.config = config
 
+    def _init_checkpointer(self):
+        if os.getenv("CHECKPOINTER") == "postgres":
+            # print ("-"*60)
+            # print("Using PostgresSaver")
+            # print(f"Connection String: {os.getenv('SUPABASE_URL')}")
+            # PostgresSaver.from_conn_string returns a context manager
+            # We need to enter the context and keep the connection alive
+            checkpointer_cm = PostgresSaver.from_conn_string(
+                os.getenv("SUPABASE_URL")
+            )
+            checkpointer = checkpointer_cm.__enter__()
+            # print(f"Checkpointer: {checkpointer}")
+            # print("Setting up checkpointer tables")
+            checkpointer.setup()
+            # print ("-"*60)
+            # Store the context manager for later cleanup if needed
+            self._checkpointer_cm = checkpointer_cm
+        else:
+            checkpointer = MemorySaver()
+        return checkpointer
+        
     def visualize_agent_graph(self):
         visualize_graph(self.agent)
 

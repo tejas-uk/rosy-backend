@@ -1,13 +1,14 @@
 from dotenv import load_dotenv
 import os
+import uuid
 from langchain_core.messages import AIMessage, HumanMessage
 from states import AgentState
 
 load_dotenv(dotenv_path=".env", override=True)
 
 from initialize_agent import Agent
-
-config = {"configurable": {"thread_id": "thread-12"}}
+# config = {"configurable": {"thread_id": f"thread-{uuid.uuid4()}"}}
+config = {"configurable": {"thread_id": "thread-1"}}
 agent = Agent(config = config)
 
 

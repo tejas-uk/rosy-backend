@@ -8,7 +8,8 @@ from langchain_pinecone import PineconeVectorStore
 
 class PineconeBookRetrieverTool(BaseTool):
     name: str = "book_retriever_tool"
-    description: str = "Search the book database for the most relevant books"
+    description: str = """This tool is used to search the book database for the most relevant information about\
+          pregnancy, early motherhood, and child care."""
 
     # Define all configurable fields with type annotations
 
@@ -35,12 +36,12 @@ class PineconeBookRetrieverTool(BaseTool):
         self._retriever = self._init_retriever()
 
     def _init_retriever(self):
-        print("-"*50)
-        print("Initializing retriever with the following parameters:")
-        print(f"Index name: {self._index_name}")
-        print(f"Embedding model: {self._embedding_model}")
-        print(f"K: {self._k}")
-        print("-"*50)
+        # print("-"*50)
+        # print("Initializing retriever with the following parameters:")
+        # print(f"Index name: {self._index_name}")
+        # print(f"Embedding model: {self._embedding_model}")
+        # print(f"K: {self._k}")
+        # print("-"*50)
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
         vectorstore = PineconeVectorStore(

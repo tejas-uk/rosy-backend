@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from states import AgentState
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from messages import LilyMessage
+# from messages import LilyMessage  # Using AIMessage instead for PostgreSQL compatibility
 from typing import Literal
 import pathlib
 
@@ -10,9 +10,10 @@ class AnswerNode:
     def __init__(
             self, 
             model_name: str = "gpt-4.1-mini", 
-            temperature: float = 0.7
+            temperature: float = 0.7,
+            max_tokens: int = 16000
         ):
-        self.answer_llm = ChatOpenAI(model=model_name, temperature=temperature)
+        self.answer_llm = ChatOpenAI(model=model_name, temperature=temperature, max_tokens=max_tokens)
 
     def _get_context(self, state: AgentState) -> str|None:
         ctx_parts = []
@@ -50,16 +51,16 @@ class AnswerNode:
                     """
 
         ROOT = pathlib.Path(__file__).parents[1]
-        LILY_PROMPT = (ROOT / "prompts" / "lily.md").read_text(encoding="utf-8")
+        ROSY_PROMPT = (ROOT / "prompts" / "rosy.md").read_text(encoding="utf-8")
         
         response = self.answer_llm.invoke([
-            SystemMessage(content=LILY_PROMPT),
+            SystemMessage(content=ROSY_PROMPT),
             HumanMessage(content=prompt)
         ]).content
 
         return {
             **state,
-            "messages": state["messages"] + [LilyMessage(content=response)]
+            "messages": state["messages"] + [AIMessage(content=response)]
         }
     
     def after_web(self, state: AgentState) -> Literal["answer"]:

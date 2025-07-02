@@ -1,7 +1,7 @@
 from langchain_core.messages import AIMessage
 
 class LilyMessage(AIMessage):
-    """A custom message class with type 'lily'."""
+    """A custom message class with type 'lily' that serializes as AIMessage."""
     type: str = "lily"
 
     def __init__(self, content, **kwargs):
