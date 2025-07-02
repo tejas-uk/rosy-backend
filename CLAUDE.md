@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Lily is a conversational AI agent designed as a pediatric nurse to support expectant mothers and caregivers. It uses a graph-based LangGraph architecture with LangChain for multi-step reasoning, combining retrieval-augmented generation (RAG), web search, and intelligent routing.
+Rosy (formerly Lily) is a conversational AI agent designed as a pediatric nurse to support expectant mothers and caregivers. It uses a graph-based LangGraph architecture with LangChain for multi-step reasoning, combining retrieval-augmented generation (RAG), web search, intelligent routing, and now includes FastAPI web service capabilities.
 
 ## Development Commands
 
@@ -13,8 +13,11 @@ Lily is a conversational AI agent designed as a pediatric nurse to support expec
 # CLI interface (main entry point)
 python main.py
 
-# FastAPI server (in development)
-# Note: api.py has incomplete implementation
+# FastAPI web service (production-ready)
+python api.py
+
+# Production initialization (for Render deployment)
+python init_production.py
 ```
 
 ### Dependencies
@@ -22,7 +25,9 @@ python main.py
 # Install all dependencies
 pip install -r requirements.txt
 
-# Key dependencies: langgraph, langchain-core, langchain-openai, chromadb, python-dotenv
+# Key dependencies: langgraph, langchain-core, langchain-openai, langchain-chroma, chromadb, 
+# langchain-tavily, fastapi, uvicorn, psycopg, langgraph-checkpoint-postgres, pinecone, 
+# langchain-pinecone, python-dotenv
 ```
 
 ### Environment Setup
@@ -30,8 +35,10 @@ Copy `.env.example` to `.env` and configure:
 - `OPENAI_API_KEY`: Required for LLM operations
 - `TAVILY_API_KEY`: Required for web search functionality
 - `LANGCHAIN_TRACING_V2=true` and `LANGCHAIN_API_KEY`: For LangSmith tracing
-- `CHECKPOINTER=postgres`: Optional, uses MemorySaver by default
+- `CHECKPOINTER`: Set to "postgres" for PostgreSQL checkpointing, uses MemorySaver by default
 - Vector DB settings: `COLLECTION_NAME`, `EMBEDDING_MODEL`, `PERSIST_DIR`
+- Supabase settings: `SUPABASE_URL`, `SUPABASE_SESSION_POOLER`
+- Pinecone settings: `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`
 
 ## Architecture
 
@@ -98,14 +105,42 @@ Copy `.env.example` to `.env` and configure:
 
 ## Vector Database
 
-Uses ChromaDB for RAG with OpenAI embeddings. Database stored in `pregnancy_and_parenting_chroma_db/`. The `BookRetrieverTool` handles vector search with configurable parameters.
+Supports both ChromaDB and Pinecone for RAG with OpenAI embeddings:
+- **ChromaDB**: Default option, stored in `pregnancy_and_parenting_chroma_db/`
+- **Pinecone**: Cloud-based vector database for production deployments
+
+The `BookRetrieverTool` (ChromaDB) and `PineconeBookRetrieverTool` handle vector search with configurable parameters.
 
 ## Persona and Behavior
 
-Lily is designed as a 20-year-old pediatric nurse from the US. Key behavioral traits:
+Rosy is designed as a 20-year-old pediatric nurse from the US. Key behavioral traits:
 - Warm, empathetic, never judgmental
 - Proactively asks clarifying questions
 - Provides medically accurate information
 - Uses bubbly, reassuring tone for expectant mothers
 
-Configuration in `prompts/lily.md` defines conversation style and response guidelines.
+Configuration in `prompts/rosy.md` defines conversation style and response guidelines.
+
+## FastAPI Web Service
+
+The `api.py` file provides a production-ready web service with the following endpoints:
+- User registration and authentication
+- Chat thread management
+- Message sending and conversation history
+- Health checks
+
+Database operations use PostgreSQL with Supabase for user management and chat persistence. See `API.md` for complete endpoint documentation.
+
+## Deployment
+
+### Production Deployment (Render)
+- `Procfile`: Defines web service command
+- `init_production.py`: Initializes production database tables
+- Uses PostgreSQL checkpointing for conversation persistence
+
+### Database Utilities (`utils/`)
+- `init_db.py`: Initialize local development database
+- `clear_checkpoints.py`: Clear conversation checkpoints
+- `fix_constraints.py`: Fix database constraint issues
+- `check_db.py`: Database health checks
+- `graph_visualizaer.py`: Visualize agent graph structure
