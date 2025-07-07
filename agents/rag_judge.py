@@ -13,7 +13,7 @@ class RagJudge(BaseModel):
 class RagJudgeNode:
     def __init__(
             self, 
-            model_name: str = "gpt-4.1-mini", 
+            model_name: str = "gpt-4o", 
             temperature: float = 0.7
         ):
         self.judge_llm = ChatOpenAI(model=model_name, temperature=temperature)\

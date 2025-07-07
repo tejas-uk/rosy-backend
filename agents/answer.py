@@ -9,7 +9,7 @@ import pathlib
 class AnswerNode:
     def __init__(
             self, 
-            model_name: str = "gpt-4.1-mini", 
+            model_name: str = "gpt-4o", 
             temperature: float = 0.7,
             max_tokens: int = 16000
         ):
