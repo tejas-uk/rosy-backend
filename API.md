@@ -8,6 +8,7 @@
 
 - [Authentication](#authentication)
 - [User Management](#user-management)
+- [Username-Only Authentication](#username-only-authentication)
 - [Chat Management](#chat-management)
 - [Error Handling](#error-handling)
 - [React/TypeScript Client](#reacttypescript-client)
@@ -15,7 +16,9 @@
 
 ## Authentication
 
-Currently, the API uses simple username/password authentication. User credentials are hashed using SHA256 and stored in the database.
+The API supports two authentication methods:
+1. **Traditional**: Username/password authentication with hashed credentials (existing users)
+2. **Simplified**: Username-only authentication with automatic account creation (new recommended approach)
 
 ## User Management
 
@@ -169,6 +172,113 @@ const handleLogin = async () => {
   } catch (error) {
     console.error('Login error:', error);
   }
+};
+```
+
+## Username-Only Authentication
+
+### Simple Login/Registration
+
+Username-only authentication that automatically creates accounts for new users or logs in existing users.
+
+**Endpoint:** `POST /auth/username`
+
+**Request Body:**
+```json
+{
+  "username": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "user_id": "uuid",
+  "username": "string",
+  "message": "Logged in successfully" // or "Account created and logged in"
+}
+```
+
+**Example - curl:**
+```bash
+curl -X POST "http://localhost:8000/auth/username" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "mom_sarah"
+  }'
+```
+
+**Example - React/TypeScript:**
+```typescript
+interface UsernameAuth {
+  username: string;
+}
+
+interface SimpleUserResponse {
+  user_id: string;
+  username: string;
+  message: string;
+}
+
+const authWithUsername = async (username: string): Promise<SimpleUserResponse> => {
+  const response = await fetch('http://localhost:8000/auth/username', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ username }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Authentication failed: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+// Usage with React state
+const [user, setUser] = useState<SimpleUserResponse | null>(null);
+
+const handleAuth = async (username: string) => {
+  try {
+    const result = await authWithUsername(username);
+    setUser(result);
+    localStorage.setItem('user_id', result.user_id);
+    localStorage.setItem('username', result.username);
+    
+    if (result.message.includes('created')) {
+      console.log('New account created for:', username);
+    } else {
+      console.log('Logged in as:', username);
+    }
+  } catch (error) {
+    console.error('Authentication error:', error);
+  }
+};
+
+// Simple login form
+const SimpleLoginForm: React.FC<{ onAuth: (username: string) => void }> = ({ onAuth }) => {
+  const [username, setUsername] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username.trim()) {
+      onAuth(username.trim());
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        placeholder="Enter your username"
+        required
+      />
+      <button type="submit">Login / Sign Up</button>
+    </form>
+  );
 };
 ```
 
@@ -756,12 +866,30 @@ export default LilyChatApp;
 
 ## Data Models
 
-### User
+### User (Traditional Authentication)
 ```typescript
 interface User {
   user_id: string;      // UUID
   username: string;     // Unique username
   email?: string;       // Optional email
+}
+```
+
+### Simple User (Username-Only Authentication)
+```typescript
+interface SimpleUser {
+  user_id: string;      // UUID
+  username: string;     // Unique username (no password required)
+}
+
+interface UsernameAuth {
+  username: string;     // Username for authentication
+}
+
+interface SimpleUserResponse {
+  user_id: string;      // UUID
+  username: string;     // Unique username
+  message: string;      // Success message
 }
 ```
 

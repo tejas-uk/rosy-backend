@@ -30,6 +30,19 @@ pip install -r requirements.txt
 # langchain-pinecone, python-dotenv
 ```
 
+### Development Tools
+```bash
+# Code formatting and linting (tools are installed but not configured)
+python -m black .                    # Format code with Black
+python -m flake8 .                   # Check style with Flake8
+python -m mypy .                     # Type checking with MyPy
+python -m pylint **/*.py             # Code analysis with Pylint
+python -m isort .                    # Sort imports with isort
+
+# Note: No testing framework is currently configured
+# No pytest, unittest, or test files exist in the codebase
+```
+
 ### Environment Setup
 Copy `.env.example` to `.env` and configure:
 - `OPENAI_API_KEY`: Required for LLM operations
@@ -55,10 +68,10 @@ Copy `.env.example` to `.env` and configure:
 - Tracks routing decisions and context from RAG/web search
 
 **Agent Nodes (agents/)**
-- `RouterNode`: Decides routing path (rag/web/answer/end)
-- `RagJudgeNode`: Evaluates RAG relevance, can route to web search
-- `WebSearchNode`: Performs web search when needed
-- `AnswerNode`: Generates final response using context and Lily persona
+- `RouterNode`: Decides routing path (rag/web/answer/end) (agents/router.py)
+- `RagJudgeNode`: Evaluates RAG relevance, can route to web search (agents/rag_judge.py)
+- `WebSearchNode`: Performs web search when needed (agents/web_search.py)
+- `AnswerNode`: Generates final response using context and Rosy persona (agents/answer.py)
 
 ### Key Patterns
 
@@ -73,7 +86,7 @@ Copy `.env.example` to `.env` and configure:
 - Implement `_run(self, query: str) -> str` method
 
 **Message Handling**
-- Custom `LilyMessage` class for agent responses (messages/lily_message.py)
+- Custom `LilyMessage` class for agent responses (messages/lily_message.py:5-15)
 - Standard LangChain message types for user input
 - Conversation history maintained in state
 
@@ -99,7 +112,7 @@ Copy `.env.example` to `.env` and configure:
 
 ### Modifying Prompts
 - System prompts stored in `prompts/` directory
-- `lily.md`: Main persona and behavior guidelines
+- `rosy.md`: Main persona and behavior guidelines (formerly lily.md)
 - `router.md`: Routing decision logic
 - `judge.md`: RAG relevance evaluation
 
@@ -124,12 +137,22 @@ Configuration in `prompts/rosy.md` defines conversation style and response guide
 ## FastAPI Web Service
 
 The `api.py` file provides a production-ready web service with the following endpoints:
-- User registration and authentication
-- Chat thread management
-- Message sending and conversation history
-- Health checks
 
-Database operations use PostgreSQL with Supabase for user management and chat persistence. See `API.md` for complete endpoint documentation.
+### Authentication Options
+- **Traditional**: Username/password authentication (`POST /users/register`, `POST /users/login`)
+- **Simplified**: Username-only authentication (`POST /auth/username`) - auto-creates accounts
+
+### Core Endpoints
+- Chat thread management (`POST /chat/new`, `GET /users/{user_id}/chats`)
+- Message sending and conversation history (`POST /chat/{user_id}/{thread_id}/message`, `GET /chat/{user_id}/{thread_id}`)
+- Health checks (`GET /health`)
+
+### Database Schema
+- `lily_users`: Traditional users with password authentication
+- `simple_users`: Username-only users (no password required)
+- `chat_threads`: Supports both user types via `user_id` and `simple_user_id` columns
+
+Database operations use PostgreSQL with Supabase for user management and chat persistence. See `API.md` for complete endpoint documentation and React/TypeScript client examples.
 
 ## Deployment
 
@@ -139,8 +162,11 @@ Database operations use PostgreSQL with Supabase for user management and chat pe
 - Uses PostgreSQL checkpointing for conversation persistence
 
 ### Database Utilities (`utils/`)
-- `init_db.py`: Initialize local development database
-- `clear_checkpoints.py`: Clear conversation checkpoints
-- `fix_constraints.py`: Fix database constraint issues
-- `check_db.py`: Database health checks
-- `graph_visualizaer.py`: Visualize agent graph structure
+```bash
+# Database management
+python utils/init_db.py              # Initialize local development database
+python utils/clear_checkpoints.py    # Clear conversation checkpoints
+python utils/fix_constraints.py      # Fix database constraint issues
+python utils/check_db.py             # Database health checks
+python utils/graph_visualizaer.py    # Visualize agent graph structure
+```

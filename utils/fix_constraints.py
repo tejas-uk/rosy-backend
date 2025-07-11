@@ -19,7 +19,17 @@ def fix_constraints():
             with conn.cursor() as cur:
                 print("Fixing database constraints...")
                 
-                # Drop and recreate chat_threads table with correct constraint
+                # Create simple_users table if it doesn't exist
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS simple_users (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        username VARCHAR(50) UNIQUE NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                print("✅ Ensured simple_users table exists")
+                
+                # Drop and recreate chat_threads table with correct constraints
                 cur.execute("DROP TABLE IF EXISTS chat_threads CASCADE")
                 print("✅ Dropped old chat_threads table")
                 
@@ -28,6 +38,7 @@ def fix_constraints():
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                         thread_id VARCHAR(100) UNIQUE NOT NULL,
                         user_id UUID REFERENCES lily_users(id) ON DELETE CASCADE,
+                        simple_user_id UUID REFERENCES simple_users(id) ON DELETE CASCADE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)

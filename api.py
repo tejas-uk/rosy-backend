@@ -22,6 +22,14 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class UsernameAuth(BaseModel):
+    username: str
+
+class SimpleUserResponse(BaseModel):
+    user_id: str
+    username: str
+    message: str
+
 class ChatCreate(BaseModel):
     user_id: str
 
@@ -75,12 +83,22 @@ def init_db():
                     )
                 """)
                 
+                # Create simple_users table for username-only authentication
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS simple_users (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        username VARCHAR(50) UNIQUE NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
                 # Create chat_threads table
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS chat_threads (
                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                         thread_id VARCHAR(100) UNIQUE NOT NULL,
                         user_id UUID REFERENCES lily_users(id) ON DELETE CASCADE,
+                        simple_user_id UUID REFERENCES simple_users(id) ON DELETE CASCADE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
@@ -162,26 +180,76 @@ def login_user(user: UserLogin):
     except psycopg.Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
+@app.post("/auth/username", response_model=SimpleUserResponse)
+def auth_username(user: UsernameAuth):
+    """Username-only authentication - login if exists, create if not."""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Check if username exists in simple_users table
+                cur.execute("SELECT id FROM simple_users WHERE username = %s", (user.username,))
+                result = cur.fetchone()
+                
+                if result:
+                    # User exists, return login success
+                    return SimpleUserResponse(
+                        user_id=str(result[0]), 
+                        username=user.username, 
+                        message="Logged in successfully"
+                    )
+                else:
+                    # User doesn't exist, create new user
+                    cur.execute(
+                        "INSERT INTO simple_users (username) VALUES (%s) RETURNING id",
+                        (user.username,)
+                    )
+                    user_id = cur.fetchone()[0]
+                    conn.commit()
+                    
+                    return SimpleUserResponse(
+                        user_id=str(user_id), 
+                        username=user.username, 
+                        message="Account created and logged in"
+                    )
+                    
+    except psycopg.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
 # Chat Management Endpoints
 @app.post("/chat/new", response_model=ChatResponse)
 def create_chat(chat: ChatCreate):
     """Create a new chat thread for a user."""
     try:
-        # Verify user exists
+        # Verify user exists in either table
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Check if user exists in lily_users table
                 cur.execute("SELECT id FROM lily_users WHERE id = %s", (chat.user_id,))
-                if not cur.fetchone():
+                lily_user = cur.fetchone()
+                
+                # Check if user exists in simple_users table
+                cur.execute("SELECT id FROM simple_users WHERE id = %s", (chat.user_id,))
+                simple_user = cur.fetchone()
+                
+                if not lily_user and not simple_user:
                     raise HTTPException(status_code=404, detail="User not found")
                 
                 # Create new thread
                 thread_id = str(uuid.uuid4())
-                cur.execute(
-                    "INSERT INTO chat_threads (thread_id, user_id) VALUES (%s, %s)",
-                    (thread_id, chat.user_id)
-                )
-                conn.commit()
+                if lily_user:
+                    # User is from lily_users table
+                    cur.execute(
+                        "INSERT INTO chat_threads (thread_id, user_id) VALUES (%s, %s)",
+                        (thread_id, chat.user_id)
+                    )
+                else:
+                    # User is from simple_users table
+                    cur.execute(
+                        "INSERT INTO chat_threads (thread_id, simple_user_id) VALUES (%s, %s)",
+                        (thread_id, chat.user_id)
+                    )
                 
+                conn.commit()
                 return ChatResponse(thread_id=thread_id, user_id=chat.user_id)
                 
     except psycopg.Error as e:
@@ -191,12 +259,14 @@ def create_chat(chat: ChatCreate):
 def get_chat(user_id: str, thread_id: str):
     """Load existing chat conversation."""
     try:
-        # Verify thread belongs to user
+        # Verify thread belongs to user (check both user types)
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Check if thread belongs to user in either lily_users or simple_users
                 cur.execute(
-                    "SELECT ct.thread_id FROM chat_threads ct WHERE ct.thread_id = %s AND ct.user_id = %s",
-                    (thread_id, user_id)
+                    """SELECT ct.thread_id FROM chat_threads ct 
+                       WHERE ct.thread_id = %s AND (ct.user_id = %s OR ct.simple_user_id = %s)""",
+                    (thread_id, user_id, user_id)
                 )
                 if not cur.fetchone():
                     raise HTTPException(status_code=404, detail="Chat thread not found")
@@ -234,12 +304,14 @@ def get_chat(user_id: str, thread_id: str):
 def send_message(user_id: str, thread_id: str, message: MessageSend):
     """Send a message to a chat thread."""
     try:
-        # Verify thread belongs to user
+        # Verify thread belongs to user (check both user types)
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Check if thread belongs to user in either lily_users or simple_users
                 cur.execute(
-                    "SELECT ct.thread_id FROM chat_threads ct WHERE ct.thread_id = %s AND ct.user_id = %s",
-                    (thread_id, user_id)
+                    """SELECT ct.thread_id FROM chat_threads ct 
+                       WHERE ct.thread_id = %s AND (ct.user_id = %s OR ct.simple_user_id = %s)""",
+                    (thread_id, user_id, user_id)
                 )
                 if not cur.fetchone():
                     raise HTTPException(status_code=404, detail="Chat thread not found")
@@ -281,9 +353,12 @@ def get_user_chats(user_id: str):
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Get chat threads for user from both user types
                 cur.execute(
-                    "SELECT thread_id, created_at FROM chat_threads WHERE user_id = %s ORDER BY created_at DESC",
-                    (user_id,)
+                    """SELECT thread_id, created_at FROM chat_threads 
+                       WHERE user_id = %s OR simple_user_id = %s 
+                       ORDER BY created_at DESC""",
+                    (user_id, user_id)
                 )
                 threads = cur.fetchall()
                 
